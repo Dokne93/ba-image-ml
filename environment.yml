@@ -1,0 +1,22 @@
+
+name: ba-image-ml
+channels:
+  - pytorch
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - scikit-image
+  - pillow
+  - opencv
+  - tqdm
+  - pyyaml
+  - pip:
+      - lpips
+      - einops
+      - realesrgan
+      - basicsr
+      - facexlib
+      - gfpgan
+      - torchvision
