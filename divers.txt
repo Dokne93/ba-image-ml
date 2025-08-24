@@ -1,0 +1,56 @@
+
+Für Tests, wo du schnell einen Durchlauf fahren willst, ohne direkt die volle CPU-Last und lange Wartezeit, kannst du diese Kombination verwenden:
+
+1. Schnell-Test (kleiner Upscale, Tiling an)
+python -m src.cli \
+  --input data/raw \
+  --output data/processed/test_x2 \
+  --steps denoise esrgan sharpen \
+  --model realesrgan-x2plus \
+  --weights models/RealESRGAN_x2plus.pth \
+  --tile 256 \
+  --max-side 2000
+
+
+Vorteile:
+
+x2 statt x4 → ca. 4x weniger Pixel → schneller
+
+Tiling = stabil, weniger RAM
+
+--max-side = keine gigantischen Bilder
+
+2. CPU-Threads optimieren
+
+Vorher exportieren (optional, macht CPU-Läufe schneller):
+
+export OMP_NUM_THREADS=8
+export MKL_NUM_THREADS=8
+
+
+(Passe 8 an die Anzahl deiner VM-Kerne an.)
+
+3. Qualitätsmetriken direkt danach messen
+
+Nach dem Lauf sofort:
+
+python -m src.metrics \
+  --ref data/raw \
+  --cmp data/processed/test_x2 \
+  --metrics psnr ssim lpips brisque niqe dists \
+  --out outputs/quality_test_x2.csv
+
+4. Volllauf mit x4 (für finale Ergebnisse)
+
+Wenn du später die bestmögliche Qualität willst:
+
+python -m src.cli \
+  --input data/raw \
+  --output data/processed/x4_tiled \
+  --steps denoise esrgan sharpen \
+  --model realesrgan-x4plus \
+  --weights models/RealESRGAN_x4plus.pth \
+  --tile 256
+
+
+Willst du, dass ich dir eine Mini-Checkliste baue, um Test- vs. Final-Läufe besser zu trennen?
