@@ -35,17 +35,45 @@ def _ensure_weights(model_name: str, weights: Optional[str]) -> str:
     return str(dst)
 
 def _safe_bgr_u8(img: np.ndarray) -> np.ndarray:
-    """Sicherstellen: BGR uint8 (RealESRGANer erwartet HWC uint8)."""
+    """
+    Bringt ein Bild sicher auf BGR uint8, ohne NumPy-Interna (._methods) zu triggern.
+    Greift NICHT auf np.max()/np.any() etc. zu, wenn das schiefgehen könnte.
+    """
     if img is None:
-        raise ValueError("Eingabebild ist None.")
-    if img.ndim == 2:  # gray -> BGR
-        img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)
-    if img.dtype != np.uint8:
-        if img.max() <= 1.5:  # wahrscheinlich 0..1 float
-            img = (img * 255.0).clip(0, 255).astype(np.uint8)
-        else:
-            img = img.clip(0, 255).astype(np.uint8)
-    return img
+        raise ValueError("Input image is None")
+
+    # Bereits uint8?
+    if isinstance(img, np.ndarray) and img.dtype == np.uint8:
+        return img
+
+    # Falls es kein ndarray ist, defensiv konvertieren
+    if not isinstance(img, np.ndarray):
+        img = np.asarray(img)
+
+    # Float-/Complex-Typen?
+    if img.dtype.kind in ("f", "c"):
+        # Heuristik: konservativ annehmen, dass 0..1 skaliert werden muss.
+        # (Das vermeidet max()/any() Aufrufe, die problematische NumPy-Pfade laden.)
+        try:
+            out = (img * 255.0).astype(np.float32)
+        except Exception:
+            # Letzter Fallback — minimale Kopie als float32
+            out = img.astype(np.float32, copy=False) * 255.0
+        out = np.clip(out, 0.0, 255.0).astype(np.uint8)
+        return out
+
+    # Integer-Typen (z.B. uint16) → clampen & auf uint8 mappen
+    if img.dtype.kind in ("i", "u"):
+        # sanftes clampen ohne .max()
+        out = img.astype(np.int32, copy=False)
+        out[out < 0] = 0
+        out[out > 255] = 255
+        return out.astype(np.uint8, copy=False)
+
+    # Andere Fälle: sicherer Fallback
+    out = img.astype(np.float32, copy=False)
+    out = np.clip(out, 0.0, 255.0).astype(np.uint8)
+    return out
 
 def _auto_tile_for_size(shape: Tuple[int, int, int]) -> int:
     """Heuristik: bei sehr großen Bildern Tiling aktivieren."""

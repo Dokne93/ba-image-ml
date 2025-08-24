@@ -1,10 +1,8 @@
-# --- Kernpakete (fixe Versionen für Kompatibilität) ---
-numpy<2
+# --- Kernpakete (Torch-Stack) ---
 torch==2.0.1
 torchvision==0.15.2
 
-# --- Bildverarbeitung ---
-scikit-image
+# --- Bildverarbeitung (restlich) ---
 Pillow
 tqdm
 pyyaml
@@ -13,6 +11,8 @@ requests
 
 # --- Qualitätsmetriken ---
 lpips
+sewar==0.4.6
+pyiqa==0.1.11
 
 # --- Real-ESRGAN-Stack ---
 realesrgan==0.3.0
