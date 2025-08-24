@@ -7,32 +7,51 @@ import numpy as np
 
 # Gewichts-URLs (offiziell)
 WEIGHTS_URLS = {
-    "realesrgan-x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5/RealESRGAN_x4plus.pth",
-    "realesrgan-x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5/RealESRGAN_x2plus.pth",
-    "realesrnet-x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5/RealESRNet_x4plus.pth",
+    "realesrgan-x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth",
+    "realesrgan-x2plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRGAN_x2plus.pth",
+    "realesrnet-x4plus": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.1/RealESRNet_x4plus.pth",
+    # optional zusätzlich im Code nutzbar:
+    "realesr-general-x4v3": "https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesr-general-x4v3.pth",
 }
 
 def _ensure_weights(model_name: str, weights: Optional[str]) -> str:
-    """Sorgt dafür, dass passende Gewichte lokal liegen (./models)."""
     if weights and Path(weights).exists():
-        return str(weights)
-    url = WEIGHTS_URLS.get(model_name)
-    if url is None:
+        return weights
+    primary = WEIGHTS_URLS.get(model_name)
+    if primary is None:
         raise ValueError(f"Unbekanntes Modell: {model_name}")
-    models_dir = Path("models")
-    models_dir.mkdir(parents=True, exist_ok=True)
-    dst = models_dir / url.split("/")[-1]
-    if not dst.exists():
-        import requests
-        print(f"[INFO] Lade Gewichte: {url}")
-        with requests.get(url, stream=True, timeout=60) as r:
-            r.raise_for_status()
-            with open(dst, "wb") as f:
-                for chunk in r.iter_content(chunk_size=8192):
-                    if chunk:
-                        f.write(chunk)
-        print(f"[INFO] Gewichte gespeichert: {dst}")
-    return str(dst)
+
+    mirrors = [primary]
+    # kleine Mirror-Liste (falls GitHub blockt)
+    if model_name == "realesrgan-x4plus":
+        mirrors.append("https://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x4plus.pth")
+    elif model_name == "realesrgan-x2plus":
+        mirrors.append("https://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x2plus.pth")
+    elif model_name == "realesrnet-x4plus":
+        mirrors.append("https://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRNet_x4plus.pth")
+    elif model_name == "realesr-general-x4v3":
+        mirrors.append("https://huggingface.co/xinntao/Real-ESRGAN/resolve/main/weights/realesr-general-x4v3.pth")
+
+    models_dir = Path("models"); models_dir.mkdir(parents=True, exist_ok=True)
+    last_err = None
+    for url in mirrors:
+        dst = models_dir / url.split("/")[-1]
+        if dst.exists():
+            return str(dst)
+        try:
+            import requests
+            print(f"[INFO] Lade Gewichte: {url}")
+            with requests.get(url, stream=True, timeout=60) as r:
+                r.raise_for_status()
+                with open(dst, "wb") as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        if chunk: f.write(chunk)
+            return str(dst)
+        except Exception as e:
+            last_err = e
+            print(f"[WARN] Download fehlgeschlagen: {e}")
+    raise RuntimeError(f"Konnte Gewichte für {model_name} nicht laden: {last_err}")
+
 
 def _safe_bgr_u8(img: np.ndarray) -> np.ndarray:
     """
