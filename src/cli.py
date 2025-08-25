@@ -15,6 +15,11 @@ def main():
     ap.add_argument('--half', action='store_true', help='FP16, nur sinnvoll mit GPU; CPU ignoriert es idR.')
     ap.add_argument('--max-side', type=int, default=0,
                     help='Eingabebild vor ESRGAN so skalieren, dass lange Kante <= max-side ist (0=aus)')
+    # multiprocessing
+    ap.add_argument('--workers', type=int, default=1,
+                help='Parallel verarbeitete Bilder (Prozesse). 1 = seriell (empfohlen bei wenig RAM)')
+    ap.add_argument('--threads', type=int, default=1,
+                help='CPU-Threads je Prozess für Torch/OpenCV')
 
     args = ap.parse_args()
     _main(args)
