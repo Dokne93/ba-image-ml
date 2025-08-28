@@ -1,28 +1,18 @@
 # src/cli.py
-from .pipeline import main as _main
+import multiprocessing as mp
+from src.pipeline import main as _main, _build_parser  # absoluter Import
 
 def main():
-    import argparse
-    ap = argparse.ArgumentParser()
-    ap.add_argument('--input', required=True)
-    ap.add_argument('--output', required=True)
-    ap.add_argument('--steps', nargs='+', required=True)
-    ap.add_argument('--model', default='realesrgan-x4plus')
-    ap.add_argument('--weights', default=None)
+    # Stabilere Startmethode für VS Code / PyTorch / NumPy
+    try:
+        mp.set_start_method("spawn", force=True)
+    except RuntimeError:
+        # bereits gesetzt – ignorieren
+        pass
 
-    # NEU: Tiling / Half / Max-Seite
-    ap.add_argument('--tile', type=int, default=0, help='Tile-Größe für ESRGAN (0=aus, z.B. 256)')
-    ap.add_argument('--half', action='store_true', help='FP16, nur sinnvoll mit GPU; CPU ignoriert es idR.')
-    ap.add_argument('--max-side', type=int, default=0,
-                    help='Eingabebild vor ESRGAN so skalieren, dass lange Kante <= max-side ist (0=aus)')
-    # multiprocessing
-    ap.add_argument('--workers', type=int, default=1,
-                help='Parallel verarbeitete Bilder (Prozesse). 1 = seriell (empfohlen bei wenig RAM)')
-    ap.add_argument('--threads', type=int, default=1,
-                help='CPU-Threads je Prozess für Torch/OpenCV')
-
+    ap = _build_parser()
     args = ap.parse_args()
     _main(args)
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
