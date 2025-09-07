@@ -1,4 +1,3 @@
-# src/cli.py
 import multiprocessing as mp
 from src.pipeline import main as _main, _build_parser  # absoluter Import
 

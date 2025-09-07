@@ -1,4 +1,3 @@
-# src/metrics.py
 from __future__ import annotations
 
 import argparse
@@ -19,7 +18,7 @@ import numpy as np
 # Unterdrücke lästige UserWarnings (z.B. aus torchvision, falls LPIPS-Fallback nötig)
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# ---- optionale Libs: wir versuchen sie, und merken uns, was verfügbar ist
+# ---- optionale Libs: Ich versuchen sie und merken uns, was verfügbar ist
 HAS_TQDM = True
 try:
     from tqdm import tqdm
@@ -71,7 +70,7 @@ def _ensure_brisque_loaded():
     return _HAS_BRISQUE
 
 
-# LPIPS-Paket NICHT hier importieren (würde torchvision ziehen & Warnungen produzieren).
+# LPIPS-Paket NICHT hier importieren (zieht torchvision & produziert Warnungen).
 # Wir machen Lazy-Import nur falls LPIPS wirklich angefordert UND PIQ nicht verfügbar.
 _HAS_LPIPS_PKG = None
 def _lazy_import_lpips():
@@ -89,7 +88,7 @@ def _lazy_import_lpips():
 # Utils
 # ---------------------------
 def _set_thread_limits(n: int):
-    # Begrenze BLAS/NumPy/Torch Threads pro Prozess – wichtig bei MP
+    # Begrenze BLAS/NumPy/Torch Threads pro Prozess (wichtig bei MP)
     os.environ["OMP_NUM_THREADS"] = str(n)
     os.environ["OPENBLAS_NUM_THREADS"] = str(n)
     os.environ["MKL_NUM_THREADS"] = str(n)
@@ -132,18 +131,52 @@ def compute_psnr(a: np.ndarray, b: np.ndarray) -> Optional[float]:
 
 
 def compute_ssim(a: np.ndarray, b: np.ndarray) -> Optional[float]:
+    """
+    SSIM in reiner NumPy/OpenCV-Implementierung (kein scikit-image nötig).
+    - Rechnet auf der Y-Luma (BT.601) für Farbbilder.
+    - Fenster: Gauß 11x11, sigma=1.5
+    """
     try:
-        if a.ndim == 3 and b.ndim == 3 and HAS_SKIMG:
-            a_rgb = cv2.cvtColor(a, cv2.COLOR_BGR2RGB)
-            b_rgb = cv2.cvtColor(b, cv2.COLOR_BGR2RGB)
-            val = sk_ssim(a_rgb, b_rgb, channel_axis=2, data_range=255)
-            return float(val)
-        ag = _to_gray(a); bg = _to_gray(b)
-        if HAS_SKIMG:
-            return float(sk_ssim(ag, bg, data_range=255))
-        return None
+        if a.shape != b.shape:
+            return None
+
+        # Falls Farbe: auf Y (Luma) wechseln – stabil & üblich
+        if a.ndim == 3 and a.shape[2] == 3:
+            # BGR -> Y (0..255, float32)
+            a_y = cv2.cvtColor(a, cv2.COLOR_BGR2YCrCb)[..., 0].astype(np.float32)
+            b_y = cv2.cvtColor(b, cv2.COLOR_BGR2YCrCb)[..., 0].astype(np.float32)
+        else:
+            a_y = a.astype(np.float32)
+            b_y = b.astype(np.float32)
+
+        # Gauß-Fenster
+        ksize = (11, 11)
+        sigma = 1.5
+        mu1 = cv2.GaussianBlur(a_y, ksize, sigma)
+        mu2 = cv2.GaussianBlur(b_y, ksize, sigma)
+
+        mu1_sq = mu1 * mu1
+        mu2_sq = mu2 * mu2
+        mu1_mu2 = mu1 * mu2
+
+        sigma1_sq = cv2.GaussianBlur(a_y * a_y, ksize, sigma) - mu1_sq
+        sigma2_sq = cv2.GaussianBlur(b_y * b_y, ksize, sigma) - mu2_sq
+        sigma12   = cv2.GaussianBlur(a_y * b_y, ksize, sigma) - mu1_mu2
+
+        # SSIM Konstanten (L = 255)
+        L = 255.0
+        C1 = (0.01 * L) ** 2
+        C2 = (0.03 * L) ** 2
+
+        num = (2 * mu1_mu2 + C1) * (2 * sigma12 + C2)
+        den = (mu1_sq + mu2_sq + C1) * (sigma1_sq + sigma2_sq + C2)
+
+        ssim_map = num / (den + 1e-12)
+        return float(ssim_map.mean())
     except Exception:
         return None
+
+
 
 
 def compute_mse(a: np.ndarray, b: np.ndarray) -> Optional[float]:

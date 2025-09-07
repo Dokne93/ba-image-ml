@@ -1,8 +1,10 @@
 # BA Image ML
 
-GPU-beschleunigte **Bildverbesserung** (Denoising + Super-Resolution) und **Qualitätsmessung** (PSNR, SSIM, LPIPS) – optimiert für **Linux** + **VS Code**.
+CPU-beschleunigte **Bildverbesserung** (Denoising + Super-Resolution) und **Qualitätsmessung** (PSNR, SSIM, MSE, MAE, FSIM, VIF, LPIPS, DISTS), optimiert für **Linux** + **VS Code**.
 
 Dieses Projekt dient als Grundlage für die Bachelorarbeit und zeigt den Einfluss von Machine Learning auf die Bildqualität und die Genauigkeit von 3D-Rekonstruktionen.
+
+---
 
 ## 📦 Setup
 
@@ -13,20 +15,29 @@ conda activate ba-image-ml
 
 # Torch passend zu deiner CUDA-Version installieren (siehe https://pytorch.org/get-started/locally/)
 # Beispiel (CUDA 12.1):
-# pip install --index-url https://download.pytorch.org/whl/cu121 torch torchvision
+pip install --index-url https://download.pytorch.org/whl/cu121 torch torchvision
 
 # weitere Abhängigkeiten
 pip install -r requirements.txt
+
 ```
 
 ## 🚀 1. Bildverbesserung durchführen
 ```bash
 python -m src.cli \
   --input data/raw \
-  --output data/processed/x4_dn_esr \
+  --output data/processed/ba_jpg \
   --steps denoise esrgan sharpen \
-  --model realesrgan-x4plus \
-  --workers 2 --threads 2 -v
+  --model realesrnet-x4plus \
+  --weights models/RealESRNet_x4plus.pth \
+  --tile 64 \
+  --max-side 1600 \
+  --workers 1 \
+  --threads 6 \
+  --out-ext jpg \
+  --keep-size \
+  -v
+
 ```
 ## Ablauf:
 - Liest die Originalbilder aus data/raw/
@@ -35,11 +46,14 @@ python -m src.cli \
 
 ## 📊 2. Qualität messen
 ```bash
+export OMP_NUM_THREADS=1 OPENBLAS_NUM_THREADS=1 MKL_NUM_THREADS=1
+
 python -m src.metrics \
   --ref data/raw \
-  --cmp data/processed/x4_dn_esr \
-  --metrics psnr ssim lpips \
-  --out outputs/quality_x4_dn_esr.csv
+  --cmp data/processed/ba_jpg \
+  --metrics psnr ssim mse mae fsim vif lpips dists \
+  --workers 6 --threads 1 \
+  --out outputs/quality_all.csv -v
 ```
 ### Ablauf:
 - Vergleicht die verbesserten Bilder mit den Originalen.
@@ -156,6 +170,11 @@ Damit kannst du die Pipeline oder die Metriken direkt per Klick in VS Code start
 2. Verbesserung: src.cli → bearbeitete Bilder in data/processed/.../
 3. Messung: src.metrics → Metriken in outputs/*.csv
 4. Analyse: CSV + Bilder vergleichen, Ergebnisse für BA dokumentieren
+
+## 🤖 Hinweis zum Einsatz von KI
+Für Debugging und punktuelle Fehlerbehebung wurde ChatGPT (Modelle GPT-4o, GPT-5) unterstützend eingesetzt.  
+Alle Konzepte, Methodenentscheidungen und Implementierungen stammen vom Autor.  
+
 
 ## 📜 Lizenz
 
