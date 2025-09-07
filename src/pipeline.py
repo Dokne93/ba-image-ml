@@ -10,18 +10,16 @@ import traceback
 import logging
 import signal
 import sys
-import multiprocessing as mp  # <-- NEU
+import multiprocessing as mp
 
 import cv2
 from functools import partial
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
-# interne Imports
+# interne Imports (absolute)
 from src.utils import list_images, read_image, save_image, relative_to_root
 from src.denoise import opencv_fastnlmeans, median_blur, bilateral_filter
 from src.enhance import esrgan_superres, unsharp_mask, auto_brightness
-
-
 
 # ---------------------------
 # Konfiguration / Konstanten
@@ -121,11 +119,14 @@ def process_image(
     tile: int = 0,
     half: bool = False,
     max_side: int = 0,
-    keep_size: bool = False,   # <--- NEU
+    keep_size: bool = False,
 ):
-    out = img
+    """
+    Führt die gewünschten Verarbeitungsschritte durch.
+    Wenn keep_size=True, wird am Ende wieder auf die Originalgröße zurückskaliert.
+    """
     orig_h, orig_w = img.shape[:2]
-
+    out = img
     for s in steps:
         if s == "denoise":
             out = opencv_fastnlmeans(out)
@@ -134,6 +135,7 @@ def process_image(
         elif s == "bilateral":
             out = bilateral_filter(out)
         elif s == "esrgan":
+            # optionales Vor-Scaling, um Speicher/Runtime zu zähmen
             out = _resize_long_side(out, max_side)
             out = esrgan_superres(
                 out,
@@ -149,12 +151,10 @@ def process_image(
         else:
             logging.warning("Unknown step ignored: %s", s)
 
-    # <<--- hier am Ende wieder auf Originalgröße zurückskalieren
-    if keep_size:
+    if keep_size and (out.shape[0] != orig_h or out.shape[1] != orig_w):
         out = cv2.resize(out, (orig_w, orig_h), interpolation=cv2.INTER_AREA)
 
     return out
-
 
 
 # ---------------------------
@@ -173,6 +173,7 @@ def _process_one(
     threads: int,
     out_ext: Optional[str],
     dry_run: bool,
+    keep_size: bool,
 ):
     """Wird in Subprozessen ausgeführt – gibt (pfad, fehler|None) zurück."""
     from pathlib import Path as _Path
@@ -185,19 +186,20 @@ def _process_one(
 
     try:
         if dry_run:
-            # Nur Zielpfad anlegen prüfen
+            # Nur Zielpfadstruktur prüfen/anlegen
             (out_path.parent).mkdir(parents=True, exist_ok=True)
             return (p_str, None)
 
         img = read_image(p)
         out = process_image(
-            img,
+            img=img,
             steps=steps,
             model=model,
             weights=weights,
             tile=tile,
             half=half,
             max_side=max_side,
+            keep_size=keep_size,
         )
         (out_path.parent).mkdir(parents=True, exist_ok=True)
         save_image(out_path, out)
@@ -281,8 +283,11 @@ def _build_parser() -> argparse.ArgumentParser:
         default=0,
         help="Mehr Ausgaben (ein- oder zweimal -v).",
     )
-    ap.add_argument("--keep-size", action="store_true",
-                help="Am Ende wieder auf die Originalgröße zurückskalieren.")
+    ap.add_argument(
+        "--keep-size",
+        action="store_true",
+        help="Am Ende wieder auf die Originalgröße zurückskalieren.",
+    )
 
     return ap
 
@@ -374,13 +379,14 @@ def main(args: Optional[argparse.Namespace] = None):
 
                     img = read_image(p)
                     out = process_image(
-                        img,
+                        img=img,
                         steps=steps,
                         model=args.model,
                         weights=args.weights,
                         tile=getattr(args, "tile", 0),
                         half=getattr(args, "half", False),
                         max_side=getattr(args, "max_side", 0),
+                        keep_size=getattr(args, "keep_size", False),
                     )
                     out_path.parent.mkdir(parents=True, exist_ok=True)
                     save_image(out_path, out)
@@ -416,9 +422,10 @@ def main(args: Optional[argparse.Namespace] = None):
             threads=threads,
             out_ext=args.out_ext,
             dry_run=args.dry_run,
+            keep_size=getattr(args, "keep_size", False),
         )
         try:
-            # ---- WICHTIG: expliziter 'spawn'-Kontext für Stabilität ----
+            # Stabiler 'spawn'-Kontext
             ctx = mp.get_context("spawn")
             with ProcessPoolExecutor(max_workers=workers, mp_context=ctx) as ex:
                 futures = {ex.submit(func, str(p)): p for p in images}
