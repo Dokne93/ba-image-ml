@@ -1,7 +1,7 @@
 from pathlib import Path
 import cv2
 import numpy as np
-from PIL import Image, ImageOps  # <— NEU
+from PIL import Image, ImageOps
 
 IMG_EXTS = {'.png', '.jpg', '.jpeg', '.bmp', '.tif', '.tiff', '.webp'}
 
@@ -11,7 +11,7 @@ def list_images(folder: Path):
 def read_image(path: Path):
     # EXIF-Orientation automatisch anwenden
     with Image.open(path) as im:
-        im = ImageOps.exif_transpose(im)  # ← macht aus Flag echte Rotation
+        im = ImageOps.exif_transpose(im)  # macht aus Flag echte Rotation
         im = im.convert("RGB")
         arr = np.array(im)[:, :, ::-1]  # RGB -> BGR für OpenCV
     return arr

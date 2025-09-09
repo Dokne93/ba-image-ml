@@ -22,7 +22,7 @@ def _ensure_weights(model_name: str, weights: Optional[str]) -> str:
         raise ValueError(f"Unbekanntes Modell: {model_name}")
 
     mirrors = [primary]
-    # kleine Mirror-Liste (falls GitHub blockt)
+    # kleine Mirror-Liste wenn GitHub blockt
     if model_name == "realesrgan-x4plus":
         mirrors.append("https://huggingface.co/ai-forever/Real-ESRGAN/resolve/main/RealESRGAN_x4plus.pth")
     elif model_name == "realesrgan-x2plus":

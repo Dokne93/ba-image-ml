@@ -1,12 +1,12 @@
 import multiprocessing as mp
-from src.pipeline import main as _main, _build_parser  # absoluter Import
+from src.pipeline import main as _main, _build_parser
 
 def main():
-    # Stabilere Startmethode für VS Code / PyTorch / NumPy
+    # Stabile Startmethode für VS Code / PyTorch / NumPy
     try:
         mp.set_start_method("spawn", force=True)
     except RuntimeError:
-        # bereits gesetzt – ignorieren
+        # bereits gesetzt, kann ich ignorieren
         pass
 
     ap = _build_parser()

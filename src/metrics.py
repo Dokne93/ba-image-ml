@@ -15,10 +15,10 @@ from src.utils import read_image  # EXIF-aware
 import cv2
 import numpy as np
 
-# Unterdrücke lästige UserWarnings (z.B. aus torchvision, falls LPIPS-Fallback nötig)
+# Unterdrücke UserWarnings
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# ---- optionale Libs: Ich versuchen sie und merken uns, was verfügbar ist
+# ---- optionale Libs: Versuchen und speichern, was verfügbar ist
 HAS_TQDM = True
 try:
     from tqdm import tqdm
@@ -36,7 +36,7 @@ except Exception:
 HAS_SEWAR_FSIM = True
 HAS_SEWAR_VIF = True
 try:
-    from sewar.full_ref import fsim as sewar_fsim  # kann in manchen Versionen fehlen
+    from sewar.full_ref import fsim as sewar_fsim  # fehlt in manchen Versionen
 except Exception:
     HAS_SEWAR_FSIM = False
 try:
@@ -71,7 +71,7 @@ def _ensure_brisque_loaded():
 
 
 # LPIPS-Paket NICHT hier importieren (zieht torchvision & produziert Warnungen).
-# Wir machen Lazy-Import nur falls LPIPS wirklich angefordert UND PIQ nicht verfügbar.
+# Lazy-Import nur wenn LPIPS wirklich angefordert UND PIQ nicht verfügbar ist.
 _HAS_LPIPS_PKG = None
 def _lazy_import_lpips():
     global _HAS_LPIPS_PKG
@@ -140,7 +140,7 @@ def compute_ssim(a: np.ndarray, b: np.ndarray) -> Optional[float]:
         if a.shape != b.shape:
             return None
 
-        # Falls Farbe: auf Y (Luma) wechseln – stabil & üblich
+        # Falls Farbe: auf Y (Luma) wechseln – stabil
         if a.ndim == 3 and a.shape[2] == 3:
             # BGR -> Y (0..255, float32)
             a_y = cv2.cvtColor(a, cv2.COLOR_BGR2YCrCb)[..., 0].astype(np.float32)
@@ -224,7 +224,7 @@ def compute_fsim(a: np.ndarray, b: np.ndarray) -> Optional[float]:
     return None
 
 
-# LPIPS: bevorzugt PIQ (vermeidet torchvision). Fallback: lpips-Paket (lazy import).
+# LPIPS: bevorzugt PIQ (vermeidet torchvision). Fallback: lpips-Paket.
 _LPIPS_MODEL_PIQ = None
 _LPIPS_MODEL_LPIPS = None
 

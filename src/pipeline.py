@@ -1,4 +1,3 @@
-# src/pipeline.py
 from __future__ import annotations
 
 from pathlib import Path
@@ -135,7 +134,7 @@ def process_image(
         elif s == "bilateral":
             out = bilateral_filter(out)
         elif s == "esrgan":
-            # optionales Vor-Scaling, um Speicher/Runtime zu zähmen
+            # optionales Vor-Scaling, um Speicher/Runtime zu limitieren
             out = _resize_long_side(out, max_side)
             out = esrgan_superres(
                 out,
@@ -186,7 +185,7 @@ def _process_one(
 
     try:
         if dry_run:
-            # Nur Zielpfadstruktur prüfen/anlegen
+            # Zielpfadstruktur prüfen/anlegen
             (out_path.parent).mkdir(parents=True, exist_ok=True)
             return (p_str, None)
 
@@ -248,7 +247,7 @@ def _build_parser() -> argparse.ArgumentParser:
     ap.add_argument(
         "--out-ext",
         default=None,
-        help="Ausgabe-Extension erzwingen (z. B. jpg, png). None = Original-Extension beibehalten.",
+        help="Ausgabe-Extension erzwingen (z.B. jpg, png). None = Original-Extension beibehalten.",
     )
     ap.add_argument(
         "--skip-existing",
@@ -312,7 +311,7 @@ def _setup_logging(log_file: Optional[str], verbose: int):
 
 
 def _install_sigint_handler():
-    # Sorgt dafür, dass KeyboardInterrupt sauber propagiert
+    # Sorgt dafür, dass KeyboardInterrupt sauber sind
     signal.signal(signal.SIGINT, signal.default_int_handler)
 
 
@@ -364,7 +363,7 @@ def main(args: Optional[argparse.Namespace] = None):
 
     ok, fail = 0, 0
 
-    # Serielle Verarbeitung (robust, speicherschonend)
+    # Serielle Verarbeitung (robust und speicherschonend)
     if workers <= 1:
         _set_thread_limits(threads)
         try:
@@ -455,7 +454,7 @@ def main(args: Optional[argparse.Namespace] = None):
 
 
 if __name__ == "__main__":
-    # global auf 'spawn' setzen (falls noch nicht geschehen)
+    # global auf 'spawn' setzen
     try:
         mp.set_start_method("spawn", force=True)
     except RuntimeError:
