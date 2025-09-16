@@ -9,7 +9,7 @@ Dieses Projekt ist Teil der Bachelorarbeit (Improving 3D Reconstruction Quality 
 ## 📦 Setup
 
 ```bash
-#Wsl aktivieren
+#WSl aktivieren
 wsl
 # Conda download
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
@@ -21,7 +21,13 @@ source ~/.bashrc
 #Test
 conda --version 
 # Conda-Umgebung erstellen
+conda activate base
 conda env create -f environment.yml
+conda activate ba-image-ml
+
+#Conda Update
+conda activate base
+conda env update -f environment.yml --prune
 conda activate ba-image-ml
 
 # Optional: Torch mit CUDA installieren (nur falls GPU verfügbar)
@@ -29,7 +35,7 @@ conda activate ba-image-ml
 # https://pytorch.org/get-started/locally/
 
 # Weitere Abhängigkeiten installieren
-pip install -r requirements.txt
+pip install --no-deps -r requirements.txt
 
 ```
 
