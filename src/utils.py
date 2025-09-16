@@ -18,7 +18,7 @@ def read_image(path: Path):
 
 def save_image(path: Path, img: np.ndarray):
     path.parent.mkdir(parents=True, exist_ok=True)
-    # Schreibe JPEG mit hoher Qualität, ohne EXIF-Orientation-Flags
+    # Schreiben der JPG mit hoher Qualität, ohne EXIF-Orientation-Flags
     if path.suffix.lower() in ('.jpg', '.jpeg'):
         cv2.imwrite(str(path), img, [int(cv2.IMWRITE_JPEG_QUALITY), 100])
     else:
