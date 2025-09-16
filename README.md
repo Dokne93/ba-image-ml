@@ -9,6 +9,17 @@ Dieses Projekt ist Teil der Bachelorarbeit (Improving 3D Reconstruction Quality 
 ## 📦 Setup
 
 ```bash
+#Wsl aktivieren
+wsl
+# Conda download
+wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
+# Installer ausführen
+bash ~/miniconda.sh
+# Shell neu initialisieren
+~/miniconda3/bin/conda init bash 
+source ~/.bashrc 
+#Test
+conda --version 
 # Conda-Umgebung erstellen
 conda env create -f environment.yml
 conda activate ba-image-ml
